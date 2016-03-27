@@ -1,10 +1,11 @@
 # stackvm/CMakeLists.txt
 
 add_executable(
-	stackvm
-	main.cpp
-	)
+  stackvm
+  command_line.cpp
+  main.cpp
+  )
 
 #target_link_libraries(stackvm libname)
 
-#target_link_libraries(stackvm ${Boost_LIBRARIES})
+target_link_libraries(stackvm ${Boost_LIBRARIES})
