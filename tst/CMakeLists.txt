@@ -4,6 +4,7 @@ include_directories("${CMAKE_SOURCE_DIR}/include")
 
 set(TESTS
   # add test files here
+  t_xl_instruction.cpp
   )
 
 add_executable(
