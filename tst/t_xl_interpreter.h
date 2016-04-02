@@ -6,9 +6,11 @@
 class TestInterpreter : public CppUnit::TestFixture {
  public:
     void emptyProgramInvalid();
+    void pushAddsInstructionToStack();
     
     CPPUNIT_TEST_SUITE(TestInterpreter);
     CPPUNIT_TEST(emptyProgramInvalid);
+    CPPUNIT_TEST(pushAddsInstructionToStack);
     CPPUNIT_TEST_SUITE_END();
 };
 

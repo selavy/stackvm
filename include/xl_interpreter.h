@@ -21,6 +21,9 @@ namespace xl {
         void load(Program&& prog);
         bool run();
         double result() const;
+
+    private:
+        bool check_stack() const;
         
     private:
         Program    prog;
