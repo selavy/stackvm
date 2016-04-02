@@ -1,6 +1,8 @@
 #include "t_xl_interpreter.h"
 #include "xl_instruction.h"
 #include "xl_interpreter.h"
+#include <vector>
+#include <utility>
 
 using namespace std;
 using namespace xl;
@@ -55,16 +57,24 @@ void TestInterpreter::popEmptyStackNotValid() {
 }
                                                
 void TestInterpreter::equalOperatorComparesTwoValues() {
-    const double lhs = 3.0;
-    const double rhs = 3.0;
-    Program program = {
-        { PUSH, lhs },
-        { PUSH, rhs },
-        { EQ }
+    const vector<pair<double, double>> cases = {
+        { 3.0, 3.0 },
+        { 2.0, 3.0 },
+        { 3.0, 2.0 },
     };
-    Interpreter interp(move(program));
-    CPPUNIT_ASSERT(interp.run());
-    CPPUNIT_ASSERT_EQUAL(lhs == rhs, static_cast<bool>(interp.result()));
+
+    for (auto&& c: cases) {
+        auto&& lhs = get<0>(c);
+        auto&& rhs = get<1>(c);
+        Program program = {
+            { PUSH, lhs },
+            { PUSH, rhs },
+            { EQ }
+        };
+        Interpreter interp(move(program));
+        CPPUNIT_ASSERT(interp.run());
+        CPPUNIT_ASSERT_EQUAL(lhs == rhs, static_cast<bool>(interp.result()));
+    }
 }
 
 //------------------------------------------------------------------------------
