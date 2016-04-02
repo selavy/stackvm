@@ -9,10 +9,8 @@ class TestInstruction : public CppUnit::TestFixture {
     void allInstructionsCanBePrinted();
     
     CPPUNIT_TEST_SUITE(TestInstruction);
-
     CPPUNIT_TEST(callOpsPutInUnionCorrectly);
     CPPUNIT_TEST(allInstructionsCanBePrinted);
-    
     CPPUNIT_TEST_SUITE_END();
 };
 
