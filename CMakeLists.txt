@@ -21,5 +21,6 @@ add_compile_options("-Wall")
 add_compile_options("-Werror")
 
 # directories
+add_subdirectory(src)
 add_subdirectory(stackvm)
 add_subdirectory(tst)

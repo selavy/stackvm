@@ -14,8 +14,10 @@ enum OpCode {
     EQ,
     NEQ,
     PLUS,
+    MINUS,
     MULT,
     DIV,
+    CALL,
 
     _MAX_CODE
 };
@@ -27,27 +29,18 @@ struct Instruction {
     union {
         double operand;
         struct {
-            int32_t funid;            
-            int32_t nargs;
+            uint32_t funid;            
+            uint32_t nargs;
         } funparms;
     };
-
-    Instruction() {}
-    
-    Instruction(OpCode code)
-    : opcode(static_cast<unsigned char>(code))
-    {}
-    
-    Instruction(OpCode code, double operand)
-    : opcode(static_cast<unsigned char>(code))
-    , operand(operand)
-    {}
-
-    Instruction(OpCode code, int32_t funid, int32_t nargs)
-    : opcode(static_cast<unsigned char>(code))
-    , operand(reinterpret_cast<double>((funid << sizeof(int32_t)) | (nargs)))
-    {}
+    Instruction();
+    Instruction(OpCode code);
+    Instruction(OpCode code, double operand);
+    Instruction(OpCode code, uint32_t funid, uint32_t nargs);
 };
+
+
+const char* to_string(Instruction const& instr);
 
 }
  

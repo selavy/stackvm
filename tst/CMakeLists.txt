@@ -14,5 +14,4 @@ add_executable(
   )
 
 target_link_libraries(tests ${CPPUNIT_LIBRARIES})
-# link with your libraries
-#target_link_libraries(tests library-name)
+target_link_libraries(tests xlvm)
