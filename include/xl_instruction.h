@@ -24,7 +24,7 @@ enum OpCode {
 // verify that down casting to char will be okay
 BOOST_STATIC_ASSERT(_MAX_CODE < std::numeric_limits<unsigned char>::max());
 
-struct Instruction {
+struct Instruction final {
     unsigned char opcode;
     union {
         double operand;
