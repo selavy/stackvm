@@ -14,13 +14,46 @@ void TestInterpreter::emptyProgramInvalid() {
 }
 
 void TestInterpreter::pushAddsInstructionToStack() {
+    const double operand = 1.0;
     Program program = {
-        { xl::PUSH, 1.0 }
+        { PUSH, operand }
     };
     Interpreter interp(move(program));
     CPPUNIT_ASSERT(interp.run());
     CPPUNIT_ASSERT_DOUBLES_EQUAL(1.0, interp.result(), TOLERANCE);
 }
+
+void TestInterpreter::nopDoesNothing() {
+    const double operand = 5.0;
+    Program program = {
+        { PUSH, operand },
+        { NOP }
+    };
+    Interpreter interp(move(program));
+    CPPUNIT_ASSERT(interp.run());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(operand, interp.result(), TOLERANCE);
+}
+
+void TestInterpreter::popRemovesFromStack() {
+    const double operand = 5.0;
+    Program program = {
+        { PUSH, operand },
+        { PUSH, 42.0    },
+        { POP           }
+    };
+    Interpreter interp(move(program));
+    CPPUNIT_ASSERT(interp.run());
+    CPPUNIT_ASSERT_DOUBLES_EQUAL(operand, interp.result(), TOLERANCE);
+}
+
+void TestInterpreter::popEmptyStackNotValid() {
+    Program program = {
+        { POP }
+    };
+    Interpreter interp(move(program));
+    CPPUNIT_ASSERT(!interp.run());
+}
+                                               
 
 //------------------------------------------------------------------------------
 CPPUNIT_TEST_SUITE_REGISTRATION(TestInterpreter);

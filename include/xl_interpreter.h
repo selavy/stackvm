@@ -11,19 +11,19 @@ namespace xl {
     
     typedef std::vector<Instruction> Program;
     
-    class Interpreter {
+    class Interpreter final {
     public:
         typedef std::vector<double> stack_type;
         
     public:
         Interpreter();
         Interpreter(Program&& prog);
-        void load(Program&& prog);
-        bool run();
-        double result() const;
+        void load(Program&& prog) noexcept;
+        bool run() noexcept;
+        double result() const noexcept;
 
     private:
-        bool check_stack() const;
+        bool check_stack() const noexcept;
         
     private:
         Program    prog;

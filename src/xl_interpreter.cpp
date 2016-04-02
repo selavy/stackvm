@@ -16,12 +16,12 @@ namespace xl {
         prog.shrink_to_fit();
     }
 
-    void Interpreter::load(Program&& prog) {
+    void Interpreter::load(Program&& prog) noexcept {
         this->prog = std::move(prog);
         this->prog.shrink_to_fit();
     }
 
-    bool Interpreter::run() {
+    bool Interpreter::run() noexcept {
         size_t ip = 0;
         const size_t len = prog.size();
         while (ip < len) {
@@ -33,6 +33,8 @@ namespace xl {
                 stack.push_back(instr.operand);
                 break;
             case POP:
+                if (stack.empty()) return false;
+                stack.pop_back();
                 break;
             case EQ:
                 break;
@@ -50,15 +52,14 @@ namespace xl {
                 break;
             }
         }
-
         return check_stack();
     }
 
-    double Interpreter::result() const {
+    double Interpreter::result() const noexcept {
         return stack.back();
     }
 
-    bool Interpreter::check_stack() const {
+    bool Interpreter::check_stack() const noexcept {
         return stack.size() == 1;
     }
     
