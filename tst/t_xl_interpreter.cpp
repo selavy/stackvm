@@ -54,6 +54,18 @@ void TestInterpreter::popEmptyStackNotValid() {
     CPPUNIT_ASSERT(!interp.run());
 }
                                                
+void TestInterpreter::equalOperatorComparesTwoValues() {
+    const double lhs = 3.0;
+    const double rhs = 3.0;
+    Program program = {
+        { PUSH, lhs },
+        { PUSH, rhs },
+        { EQ }
+    };
+    Interpreter interp(move(program));
+    CPPUNIT_ASSERT(interp.run());
+    CPPUNIT_ASSERT_EQUAL(lhs == rhs, static_cast<bool>(interp.result()));
+}
 
 //------------------------------------------------------------------------------
 CPPUNIT_TEST_SUITE_REGISTRATION(TestInterpreter);

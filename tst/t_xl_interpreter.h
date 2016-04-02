@@ -10,6 +10,7 @@ class TestInterpreter : public CppUnit::TestFixture {
     void nopDoesNothing();
     void popRemovesFromStack();
     void popEmptyStackNotValid();
+    void equalOperatorComparesTwoValues();
     
     CPPUNIT_TEST_SUITE(TestInterpreter);
     CPPUNIT_TEST(emptyProgramInvalid);
@@ -17,6 +18,7 @@ class TestInterpreter : public CppUnit::TestFixture {
     CPPUNIT_TEST(nopDoesNothing);
     CPPUNIT_TEST(popRemovesFromStack);
     CPPUNIT_TEST(popEmptyStackNotValid);
+    CPPUNIT_TEST(equalOperatorComparesTwoValues);
     CPPUNIT_TEST_SUITE_END();
 };
 

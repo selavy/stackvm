@@ -36,8 +36,16 @@ namespace xl {
                 if (stack.empty()) return false;
                 stack.pop_back();
                 break;
-            case EQ:
+            case EQ: {
+                if (stack.size() < 2) return false;
+                const double lhs = stack.back();
+                stack.pop_back();
+                const double rhs = stack.back();
+                stack.back() = static_cast<double>(lhs == rhs);
+                // stack.pop_back();
+                // stack.push_back(static_cast<double>(lhs == rhs));
                 break;
+            }
             case NEQ:
                 break;
             case PLUS:
