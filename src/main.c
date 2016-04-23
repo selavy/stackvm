@@ -91,6 +91,38 @@ int main(int argc, char** argv) {
         assert(result == (64 / 2));
     }
 
+    { /* JNZ instruction - do jump*/
+        struct instruction_t program[] = {
+            { .opcode = kPUSH, .operand =  1 }, /*0*/ /* TRUE value */
+            { .opcode = kJNZ , .operand =  3 }, /*1*/
+            { .opcode = kPUSH, .operand =  2 }, /*2*/ /* skipped by jnz */
+            { .opcode = kPUSH, .operand = 42 }  /*3*/
+        };
+        assert(machine_execute(&program[0], LEN, &result) == 0);
+        assert(result == 42);
+    }
+
+    { /* JNZ instruction - do not jump*/
+        struct instruction_t program[] = {
+            { .opcode = kPUSH, .operand =  0 }, /*0*/ /* FALSE value */
+            { .opcode = kJNZ , .operand =  3 }, /*1*/
+            { .opcode = kPUSH, .operand =  2 }, /*2*/
+            { .opcode = kPUSH, .operand = 42 }, /*3*/
+            { .opcode = kPOP , .operand =  0 }  /*4*/
+        };
+        assert(machine_execute(&program[0], LEN, &result) == 0);
+        assert(result == 2);
+    }
+
+    { /* JNZ instruction - jump past end fails*/
+        struct instruction_t program[] = {
+            { .opcode = kPUSH, .operand =  1 }, /*0*/ /* TRUE value */
+            { .opcode = kJNZ , .operand =  9 }, /*1*/ /* try to jump past end of instructions */
+            { .opcode = kPUSH, .operand =  2 }, /*2*/ /* skipped by jnz */
+        };
+        assert(machine_execute(&program[0], LEN, &result) != 0);
+    }
+
     printf("Passed.\n");
     return 0;
 }

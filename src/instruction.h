@@ -9,6 +9,7 @@ enum opcode_t {
     // unary operators
     kPUSH,
     kPOP,
+    kJNZ,
 
     // binary operators
     kADD,
