@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -Werror
 TARGET=stackvm
-OBJS=main.o
+OBJS=main.o machine.o
 
 all: $(TARGET)
 
