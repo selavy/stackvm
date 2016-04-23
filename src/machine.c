@@ -13,16 +13,21 @@ int machine_execute(const struct instruction_t* program, const int32_t len, int6
         case kNOP:
             ++ip;
             break;
-        case kADD:
-            stack[sp - 2] += stack[sp - 1];
-            --sp;
-            ++ip;
-            break;
         case kPUSH:
             stack[sp++] = ip->operand;
             ++ip;
             break;
         case kPOP:
+            --sp;
+            ++ip;
+            break;
+        case kADD:
+            stack[sp - 2] += stack[sp - 1];
+            --sp;
+            ++ip;
+            break;
+        case kSUB:
+            stack[sp - 2] -= stack[sp - 1];
             --sp;
             ++ip;
             break;

@@ -5,9 +5,16 @@
 
 enum opcode_t {
     kNOP = 0,
-    kADD,
+
+    // unary operators
     kPUSH,
     kPOP,
+
+    // binary operators
+    kADD,
+    kSUB,
+
+    // halt
     kHALT
 };
 

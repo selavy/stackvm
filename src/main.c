@@ -50,6 +50,26 @@ int main(int argc, char** argv) {
         };
         assert(machine_execute(&program[0], LEN, &result) != 0);
     }
+
+    { // ADD instruction
+        struct instruction_t program[] = {
+            { .opcode = kPUSH, .operand = 64 },
+            { .opcode = kPUSH, .operand = 64 },
+            { .opcode = kADD , .operand =  0 }
+        };
+        assert(machine_execute(&program[0], LEN, &result) == 0);
+        assert(result == (64 + 64));
+    }
+
+    { // SUB instruction
+        struct instruction_t program[] = {
+            { .opcode = kPUSH, .operand = 64 },
+            { .opcode = kPUSH, .operand = 64 },
+            { .opcode = kSUB , .operand =  0 }
+        };
+        assert(machine_execute(&program[0], LEN, &result) == 0);
+        assert(result == (64 - 64));
+    }
     printf("Passed.\n");
     return 0;
 }
