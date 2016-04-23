@@ -24,6 +24,7 @@ int machine_execute(const struct instruction_t* program, const int32_t len, int6
             break;
         case kPOP:
             --sp;
+            ++ip;
             break;
         case kHALT:
             goto halt;
