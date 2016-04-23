@@ -54,22 +54,43 @@ int main(int argc, char** argv) {
     { // ADD instruction
         struct instruction_t program[] = {
             { .opcode = kPUSH, .operand = 64 },
-            { .opcode = kPUSH, .operand = 64 },
+            { .opcode = kPUSH, .operand = 32 },
             { .opcode = kADD , .operand =  0 }
         };
         assert(machine_execute(&program[0], LEN, &result) == 0);
-        assert(result == (64 + 64));
+        assert(result == (64 + 32));
     }
 
     { // SUB instruction
         struct instruction_t program[] = {
             { .opcode = kPUSH, .operand = 64 },
-            { .opcode = kPUSH, .operand = 64 },
+            { .opcode = kPUSH, .operand = 14 },
             { .opcode = kSUB , .operand =  0 }
         };
         assert(machine_execute(&program[0], LEN, &result) == 0);
-        assert(result == (64 - 64));
+        assert(result == (64 - 14));
     }
+
+    { // MUL instruction
+        struct instruction_t program[] = {
+            { .opcode = kPUSH, .operand = 64 },
+            { .opcode = kPUSH, .operand = 20 },
+            { .opcode = kMUL , .operand =  0 }
+        };
+        assert(machine_execute(&program[0], LEN, &result) == 0);
+        assert(result == (64 * 20));
+    }
+
+    { // DIV instruction
+        struct instruction_t program[] = {
+            { .opcode = kPUSH, .operand = 64 },
+            { .opcode = kPUSH, .operand =  2 },
+            { .opcode = kDIV , .operand =  0 }
+        };
+        assert(machine_execute(&program[0], LEN, &result) == 0);
+        assert(result == (64 / 2));
+    }
+
     printf("Passed.\n");
     return 0;
 }

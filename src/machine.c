@@ -31,6 +31,18 @@ int machine_execute(const struct instruction_t* program, const int32_t len, int6
             --sp;
             ++ip;
             break;
+        case kMUL:
+            stack[sp - 2] *= stack[sp - 1];
+            --sp;
+            ++ip;
+            break;
+        case kDIV:
+            if (stack[sp - 1] == 0)
+                goto halt;
+            stack[sp - 2] /= stack[sp - 1];
+            --sp;
+            ++ip;
+            break;
         case kHALT:
             goto halt;
             break;

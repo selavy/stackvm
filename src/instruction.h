@@ -13,6 +13,8 @@ enum opcode_t {
     // binary operators
     kADD,
     kSUB,
+    kMUL,
+    kDIV,
 
     // halt
     kHALT
