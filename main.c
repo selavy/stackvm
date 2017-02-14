@@ -17,6 +17,9 @@ enum {
     OP_PUSH,
     OP_POP,
     OP_ADD,
+    OP_SUB,
+    OP_MULT,
+    OP_DIV,
     OP_HALT,
 
     // must be last, also serves as count
@@ -29,6 +32,9 @@ const char *const _op_to_string[OP_INVALID+1] = {
     "PUSH",
     "POP",
     "ADD",
+    "SUB",
+    "MULT",
+    "DIV",
     "HALT",
     "INVALID",
 };
@@ -132,9 +138,24 @@ int Interpreter_run(Interpreter *interp) {
                 --sp;
                 break;
             case OP_ADD:
-                assert(sp > 2);
+                assert(sp >= 2);
                 stack[sp-2] = stack[sp-1] + stack[sp-2];
-                sp = sp - 2;
+                --sp;
+                break;
+            case OP_SUB:
+                assert(sp >= 2);
+                stack[sp-2] = stack[sp-1] - stack[sp-2];
+                --sp;
+                break;
+            case OP_MULT:
+                assert(sp >= 2);
+                stack[sp-2] = stack[sp-1] * stack[sp-2];
+                --sp;
+                break;
+            case OP_DIV:
+                assert(sp >= 2);
+                stack[sp-2] = stack[sp-1] / stack[sp-2];
+                --sp;
                 break;
             case OP_HALT:
                 assert(sp == 1);
@@ -164,6 +185,8 @@ int main(int argc, char **argv) {
     }
 
     Interpreter_push(&interp, Instruction_create_dbl(OP_PUSH, 8.0));
+    Interpreter_push(&interp, Instruction_create_dbl(OP_PUSH, 10.0));
+    Interpreter_push(&interp, Instruction_create(OP_DIV));
     Interpreter_push(&interp, Instruction_create(OP_HALT));
     rval = Interpreter_run(&interp);
     if (rval != 0) {
