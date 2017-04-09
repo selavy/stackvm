@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <assert.h>
+#include <lightning.h>
 
 enum {
   OP_NOP,
@@ -156,12 +157,35 @@ void TEST_div() {
   assert(result == (A / B));
 }
 
+static jit_state_t *_jit;
+typedef int (*pifi)(int);
+
 int main(int argc, char **argv) {
   TEST_add();
   TEST_sub();
   TEST_mul();
   TEST_div();  
-
   printf("passed.\n");
+
+  jit_node_t *in;
+  pifi        incr;
+
+  init_jit(argv[0]);
+  _jit = jit_new_state();
+
+  jit_prolog();
+  in = jit_arg();
+  jit_getarg(JIT_R0, in);
+  jit_addi(JIT_R0, JIT_R0, 1);
+  jit_retr(JIT_R0);
+
+  incr = jit_emit();
+  jit_clear_state();
+
+  printf("%d + 1 = %d\n", 5, incr(5));
+
+  jit_destroy_state();
+  finish_jit();
+  
   return 0;
 }

@@ -9,3 +9,4 @@ add_compile_options("-Werror")
 add_compile_options("--std=gnu11")
 
 add_executable(stackvm main.c)
+target_link_libraries(stackvm /usr/local/lib/liblightning.so)
