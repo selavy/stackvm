@@ -19,21 +19,11 @@ struct Instruction {
 };
 typedef struct Instruction Instruction;
 
-// TODO(plesslie): make programs resizable
-/* #define MAX_INSTR 128 */
-/* struct Program { */
-/*   Instruction instrs[MAX_INSTR]; */
-/*   size_t      len; */
-/* }; */
-/* typedef struct Program Program; */
-
 #define EBADOPCODE      1
 #define ESTACKUNDERFLOW 2
 #define ESTACKOVERFLOW  3
 
 int VM_execute(Instruction *prog, const Instruction *endp, double *stack, int stacklen, double *result) {
-  //const Instruction *pc = &prog->instrs[0];
-  //const Instruction *end_pc = pc + prog->len;
   const Instruction *pc = prog;
   const Instruction *const end_pc = endp;
   size_t sp = 0;
@@ -82,18 +72,96 @@ int VM_execute(Instruction *prog, const Instruction *endp, double *stack, int st
   return 0;
 }
 
-int main(int argc, char **argv) {
+void TEST_add() {
+  const double A = 5.5;
+  const double B = 6.;
   Instruction insts[] = {
-    { .op=OP_PSH, .dval=5.5 },
-    { .op=OP_PSH, .dval=6.  },
+    { .op=OP_PSH, .dval=A },
+    { .op=OP_PSH, .dval=B  },
     { .op=OP_ADD, .dval=0.  }
   };
   const size_t len = sizeof(insts) / sizeof(*insts);
   const size_t stacklen = 10;
   double stack[stacklen];
   double result;
-  int res = VM_execute(&insts[0], &insts[len], &stack[0], stacklen, &result);
-  printf("res=%d, result=%f\n", res, result);
-  
+  int res = VM_execute(&insts[0],
+		       &insts[len],
+		       &stack[0],
+		       stacklen,
+		       &result);
+  assert(res == 0);
+  assert(result == (A + B));
+}
+
+void TEST_sub() {
+  const double A = 5.5;
+  const double B = 6.;
+  Instruction insts[] = {
+    { .op=OP_PSH, .dval=A },
+    { .op=OP_PSH, .dval=B  },
+    { .op=OP_SUB, .dval=0.  }
+  };
+  const size_t len = sizeof(insts) / sizeof(*insts);
+  const size_t stacklen = 10;
+  double stack[stacklen];
+  double result;
+  int res = VM_execute(&insts[0],
+		       &insts[len],
+		       &stack[0],
+		       stacklen,
+		       &result);
+  assert(res == 0);
+  assert(result == (A - B));
+}
+
+void TEST_mul() {
+  const double A = 5.5;
+  const double B = 6.;
+  Instruction insts[] = {
+    { .op=OP_PSH, .dval=A },
+    { .op=OP_PSH, .dval=B  },
+    { .op=OP_MUL, .dval=0.  }
+  };
+  const size_t len = sizeof(insts) / sizeof(*insts);
+  const size_t stacklen = 10;
+  double stack[stacklen];
+  double result;
+  int res = VM_execute(&insts[0],
+		       &insts[len],
+		       &stack[0],
+		       stacklen,
+		       &result);
+  assert(res == 0);
+  assert(result == (A * B));
+}
+
+void TEST_div() {
+  const double A = 5.5;
+  const double B = 6.;
+  Instruction insts[] = {
+    { .op=OP_PSH, .dval=A },
+    { .op=OP_PSH, .dval=B  },
+    { .op=OP_DIV, .dval=0.  }
+  };
+  const size_t len = sizeof(insts) / sizeof(*insts);
+  const size_t stacklen = 10;
+  double stack[stacklen];
+  double result;
+  int res = VM_execute(&insts[0],
+		       &insts[len],
+		       &stack[0],
+		       stacklen,
+		       &result);
+  assert(res == 0);
+  assert(result == (A / B));
+}
+
+int main(int argc, char **argv) {
+  TEST_add();
+  TEST_sub();
+  TEST_mul();
+  TEST_div();  
+
+  printf("passed.\n");
   return 0;
 }
