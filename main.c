@@ -25,13 +25,13 @@ struct instruction {
 };
 
 void _JIT_stack_push(jit_state_t *_jit, int reg, int *sp) {
-    jit_stxi_i(*sp, JIT_FP, reg);
+    jit_stxi_d(*sp, JIT_FP, reg);
     *sp += sizeof(double);
 }
 
 void _JIT_stack_pop(jit_state_t *_jit, int reg, int *sp) {
     *sp -= sizeof(double);
-    jit_ldxi_i(reg, JIT_FP, *sp);
+    jit_ldxi_d(reg, JIT_FP, *sp);
 }
 
 jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict program, size_t progsz) {
@@ -50,31 +50,31 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
         case OP_NOP:
             break;
         case OP_PUSH:
-            _JIT_stack_push(_jit, JIT_R0, &sp);
-            jit_movi(JIT_R0, ip->ival);
+            _JIT_stack_push(_jit, JIT_F0, &sp);
+            jit_movi_d(JIT_F0, ip->dval);
             break;
         case OP_ADD:
-            _JIT_stack_pop(_jit, JIT_R1, &sp);
-            jit_addr(JIT_R0, JIT_R1, JIT_R0);
+            _JIT_stack_pop(_jit, JIT_F1, &sp);
+            jit_addr_d(JIT_F0, JIT_F1, JIT_F0);
             break;
         case OP_SUB:
-            _JIT_stack_pop(_jit, JIT_R1, &sp);
-            jit_subr(JIT_R0, JIT_R1, JIT_R0);            
+            _JIT_stack_pop(_jit, JIT_F1, &sp);
+            jit_subr_d(JIT_F0, JIT_F1, JIT_F0);            
             break;
         case OP_MUL:
-            _JIT_stack_pop(_jit, JIT_R1, &sp);
-            jit_mulr(JIT_R0, JIT_R1, JIT_R0);            
+            _JIT_stack_pop(_jit, JIT_F1, &sp);
+            jit_mulr_d(JIT_F0, JIT_F1, JIT_F0);            
             break;
         case OP_DIV:
-            _JIT_stack_pop(_jit, JIT_R1, &sp);
-            jit_divr(JIT_R0, JIT_R1, JIT_R0);            
+            _JIT_stack_pop(_jit, JIT_F1, &sp);
+            jit_divr_d(JIT_F0, JIT_F1, JIT_F0);            
             break;
         }
         
         ++pc;
     }
 
-    jit_retr(JIT_R0);
+    jit_retr_d(JIT_F0);
     jit_epilog();
     return fn;
 }
@@ -83,13 +83,13 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
   
 int main(int argc, char **argv) {
     struct instruction program[] = {
-        { .op=OP_PUSH, .ival=1 },
-        { .op=OP_PUSH, .ival=2 },
-        { .op=OP_ADD           },
+        { .op=OP_PUSH, .dval=1. },
+        { .op=OP_PUSH, .dval=2. },
+        { .op=OP_ADD            },
     };
     jit_state_t *_jit;
     jit_node_t *fn;
-    typedef int(*func)(void);
+    typedef double (*func)(void);
     func my_func;
 
     init_jit(argv[0]);
@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
 
     my_func = (func)jit_address(fn);
 
-    printf("result: %d\n", my_func());
+    printf("result: %f\n", my_func());
 
     jit_destroy_state();
     finish_jit();
