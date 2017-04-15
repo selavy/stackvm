@@ -1,191 +1,109 @@
 #include <stdio.h>
-#include <inttypes.h>
-#include <assert.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <lightning.h>
 
-enum {
-  OP_NOP,
-  OP_ADD,
-  OP_SUB,
-  OP_MUL,
-  OP_DIV,
-  OP_PSH,
-  OP_POP,
+enum opcode {
+    OP_NOP,
+    OP_PUSH,
+    OP_ADD,
+    OP_SUB,
+    OP_MUL,
+    OP_DIV,
 };
-typedef uint8_t Opcode;
 
-struct Instruction {
-  Opcode op;
-  double dval;
+struct instruction {
+    uint8_t op;
+    union {
+        int    ival;
+        double dval;
+        struct {
+            uint32_t fidx;
+            uint32_t narg;
+        } callop;
+    };
 };
-typedef struct Instruction Instruction;
 
-#define EBADOPCODE      1
-#define ESTACKUNDERFLOW 2
-#define ESTACKOVERFLOW  3
+void _JIT_stack_push(jit_state_t *_jit, int reg, int *sp) {
+    jit_stxi_i(*sp, JIT_FP, reg);
+    *sp += sizeof(double);
+}
 
-int VM_execute(Instruction *prog, const Instruction *endp, double *stack, int stacklen, double *result) {
-  const Instruction *pc = prog;
-  const Instruction *const end_pc = endp;
-  size_t sp = 0;
-  while (pc < end_pc) {
-    switch (pc->op) {
-    case OP_NOP:
-      break;
-    case OP_ADD:
-      assert(sp >= 2);
-      stack[sp - 2] = stack[sp - 2] + stack[sp - 1];
-      --sp;
-      break;
-    case OP_SUB:
-      assert(sp >= 2);
-      stack[sp - 2] = stack[sp - 2] - stack[sp - 1];
-      --sp;      
-      break;
-    case OP_MUL:
-      assert(sp >= 2);
-      stack[sp - 2] = stack[sp - 2] * stack[sp - 1];
-      --sp;      
-      break;
-    case OP_DIV:
-      assert(sp >= 2);
-      stack[sp - 2] = stack[sp - 2] / stack[sp - 1];
-      --sp;      
-      break;
-    case OP_PSH:
-      stack[sp++] = pc->dval;
-      break;
-    case OP_POP:
-      --sp;
-      break;
-    default:
-      return -EBADOPCODE;
+void _JIT_stack_pop(jit_state_t *_jit, int reg, int *sp) {
+    *sp -= sizeof(double);
+    jit_ldxi_i(reg, JIT_FP, *sp);
+}
+
+jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict program, size_t progsz) {
+    const struct instruction *ip;    
+    size_t pc = 0;
+    int sp;
+    jit_node_t *fn;
+
+    fn = jit_note(NULL, 0);
+    jit_prolog();
+    sp = jit_allocai(32 * sizeof(int));
+    
+    while (pc < progsz) {
+        ip = &program[pc];
+        switch (ip->op) {
+        case OP_NOP:
+            break;
+        case OP_PUSH:
+            _JIT_stack_push(_jit, JIT_R0, &sp);
+            jit_movi(JIT_R0, ip->ival);
+            break;
+        case OP_ADD:
+            _JIT_stack_pop(_jit, JIT_R1, &sp);
+            jit_addr(JIT_R0, JIT_R1, JIT_R0);
+            break;
+        case OP_SUB:
+            _JIT_stack_pop(_jit, JIT_R1, &sp);
+            jit_subr(JIT_R0, JIT_R1, JIT_R0);            
+            break;
+        case OP_MUL:
+            _JIT_stack_pop(_jit, JIT_R1, &sp);
+            jit_mulr(JIT_R0, JIT_R1, JIT_R0);            
+            break;
+        case OP_DIV:
+            _JIT_stack_pop(_jit, JIT_R1, &sp);
+            jit_divr(JIT_R0, JIT_R1, JIT_R0);            
+            break;
+        }
+        
+        ++pc;
     }
-    ++pc;
-  }
+
+    jit_retr(JIT_R0);
+    jit_epilog();
+    return fn;
+}
+
+#define ARRSIZE(arr) (sizeof(arr) / sizeof(*arr))
   
-  if (sp > 1) {
-    return -ESTACKUNDERFLOW;
-  } else if (sp == 0) {
-    return -ESTACKOVERFLOW;
-  }
-  *result = stack[0];
-  return 0;
-}
-
-void TEST_add() {
-  const double A = 5.5;
-  const double B = 6.;
-  Instruction insts[] = {
-    { .op=OP_PSH, .dval=A },
-    { .op=OP_PSH, .dval=B  },
-    { .op=OP_ADD, .dval=0.  }
-  };
-  const size_t len = sizeof(insts) / sizeof(*insts);
-  const size_t stacklen = 10;
-  double stack[stacklen];
-  double result;
-  int res = VM_execute(&insts[0],
-		       &insts[len],
-		       &stack[0],
-		       stacklen,
-		       &result);
-  assert(res == 0);
-  assert(result == (A + B));
-}
-
-void TEST_sub() {
-  const double A = 5.5;
-  const double B = 6.;
-  Instruction insts[] = {
-    { .op=OP_PSH, .dval=A },
-    { .op=OP_PSH, .dval=B  },
-    { .op=OP_SUB, .dval=0.  }
-  };
-  const size_t len = sizeof(insts) / sizeof(*insts);
-  const size_t stacklen = 10;
-  double stack[stacklen];
-  double result;
-  int res = VM_execute(&insts[0],
-		       &insts[len],
-		       &stack[0],
-		       stacklen,
-		       &result);
-  assert(res == 0);
-  assert(result == (A - B));
-}
-
-void TEST_mul() {
-  const double A = 5.5;
-  const double B = 6.;
-  Instruction insts[] = {
-    { .op=OP_PSH, .dval=A },
-    { .op=OP_PSH, .dval=B  },
-    { .op=OP_MUL, .dval=0.  }
-  };
-  const size_t len = sizeof(insts) / sizeof(*insts);
-  const size_t stacklen = 10;
-  double stack[stacklen];
-  double result;
-  int res = VM_execute(&insts[0],
-		       &insts[len],
-		       &stack[0],
-		       stacklen,
-		       &result);
-  assert(res == 0);
-  assert(result == (A * B));
-}
-
-void TEST_div() {
-  const double A = 5.5;
-  const double B = 6.;
-  Instruction insts[] = {
-    { .op=OP_PSH, .dval=A },
-    { .op=OP_PSH, .dval=B  },
-    { .op=OP_DIV, .dval=0.  }
-  };
-  const size_t len = sizeof(insts) / sizeof(*insts);
-  const size_t stacklen = 10;
-  double stack[stacklen];
-  double result;
-  int res = VM_execute(&insts[0],
-		       &insts[len],
-		       &stack[0],
-		       stacklen,
-		       &result);
-  assert(res == 0);
-  assert(result == (A / B));
-}
-
-static jit_state_t *_jit;
-typedef int (*pifi)(int);
-
 int main(int argc, char **argv) {
-  TEST_add();
-  TEST_sub();
-  TEST_mul();
-  TEST_div();  
-  printf("passed.\n");
+    struct instruction program[] = {
+        { .op=OP_PUSH, .ival=1 },
+        { .op=OP_PUSH, .ival=2 },
+        { .op=OP_ADD           },
+    };
+    jit_state_t *_jit;
+    jit_node_t *fn;
+    typedef int(*func)(void);
+    func my_func;
 
-  jit_node_t *in;
-  pifi        incr;
+    init_jit(argv[0]);
+    _jit = jit_new_state();
 
-  init_jit(argv[0]);
-  _jit = jit_new_state();
+    fn = JIT_translate(_jit, &program[0], ARRSIZE(program));
+    (void)jit_emit();
 
-  jit_prolog();
-  in = jit_arg();
-  jit_getarg(JIT_R0, in);
-  jit_addi(JIT_R0, JIT_R0, 1);
-  jit_retr(JIT_R0);
+    my_func = (func)jit_address(fn);
 
-  incr = jit_emit();
-  jit_clear_state();
+    printf("result: %d\n", my_func());
 
-  printf("%d + 1 = %d\n", 5, incr(5));
-
-  jit_destroy_state();
-  finish_jit();
-  
-  return 0;
+    jit_destroy_state();
+    finish_jit();
+    
+    return 0;
 }
