@@ -86,8 +86,8 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
     fp = sp = jit_allocai(32 * sizeof(double));
     
     while (pc < progsz) {
-        printf("BEFORE fp: %d, sp: %d\n", fp, sp);
         ip = &program[pc];
+        printf("BEFORE %s: fp: %d, sp: %d\n", trans_opcode(ip->op), fp, sp);
         switch (ip->op) {
         case OP_NOP:
             break;
@@ -112,22 +112,21 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
             jit_divr_d(JIT_F0, JIT_F1, JIT_F0);            
             break;
         case OP_CALL:
-            // TODO: push arguments
-            //_JIT_stack_push(_jit, JIT_F0, &sp);
-            
             jit_prepare();
             jit_pushargi((jit_word_t)env);
             jit_pushargi(ip->callop.narg);
+
+            _JIT_stack_push(_jit, JIT_F0, &sp); // head of stack is stored in a register
+            
             /* jit_addr(JIT_R0, JIT_FP, sp*sizeof(double)); */
             /* jit_pushargr(JIT_R0); */
+            
             //jit_finishi((jit_pointer_t)ENV_translate_idx(ip->callop.fidx));
             jit_finishi((jit_pointer_t)fixme_function);
 
             sp -= sizeof(double) * ip->callop.narg;
 
             jit_retval_d(JIT_F0);
-            _JIT_stack_push(_jit, JIT_F0, &sp);
-
             break;
         }
 
