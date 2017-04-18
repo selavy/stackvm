@@ -109,10 +109,6 @@ callback_t dummy_translator(uint32_t fidx) {
     /* } */
 }
 
-double exit_function() {
-    return -1;
-}
-
 jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict program, size_t progsz, void *env, translator_t trans) {
     const struct instruction *ip;    
     size_t pc = 0;
@@ -126,8 +122,6 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
     jit_prolog();
     fp = sp = jit_allocai(6 * sizeof(double));
 
-    ret = exit_function();
-    
     while (pc < progsz) {
         ip = &program[pc];
         printf("BEFORE %s: fp: %d, sp: %d\n", trans_opcode(ip->op), fp, sp);
@@ -169,7 +163,6 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
                 abort();
             }
             jit_finishi((jit_pointer_t)cb);
-            //jit_finishi((jit_pointer_t)ENV_translate_idx(ip->callop.fidx));
             //jit_finishi((jit_pointer_t)fixme_function);
             
             sp -= sizeof(double) * ip->callop.narg; // consume arguments on stack
@@ -177,7 +170,12 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
             jit_retval_d(JIT_F0);
             jit_retval(JIT_R0);
 
-            ref = jit_bnei(JIT_R0, 0);
+            ref = jit_beqi(JIT_R0, 0);
+            
+            // return early because of bad retcode
+            jit_movi_d(JIT_F0, -1.0);
+            jit_retr_d(JIT_F0);
+            jit_patch(ref);
             
             break;
         }
@@ -191,11 +189,6 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
     printf("sp = %d\n", sp);
 
     jit_retr_d(JIT_F0);
-
-    jit_patch(ref);
-    jit_movi_d(JIT_F0, -1.0);
-    jit_retr_d(JIT_F0);
-    
     jit_epilog();
 
     return fn;
@@ -206,14 +199,15 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
 int main(int argc, char **argv) {
     struct instruction program[] = {
         { .op=OP_PUSH, .dval=234235. },
-        //{ .op=OP_PUSH, .dval=666666. },
-        //{ .op=OP_CALL, .callop={ .fidx=1, .narg=2 } },
+        { .op=OP_PUSH, .dval=666666. },
+        { .op=OP_CALL, .callop={ .fidx=1, .narg=2 } },
         { .op=OP_PUSH, .dval=5. },
         { .op=OP_PUSH, .dval=77. },
         { .op=OP_CALL, .callop={ .fidx=2, .narg=3 } },
-        /* { .op=OP_MUL            }, */
-        /* { .op=OP_PUSH, .dval=2. }, */
-        /* { .op=OP_DIV            }, */
+        { .op=OP_PUSH, .dval=5. },
+        { .op=OP_MUL            },
+        { .op=OP_PUSH, .dval=2. },
+        { .op=OP_DIV            },
     };
     jit_state_t *_jit;
     jit_node_t *fn;
