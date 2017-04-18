@@ -71,29 +71,62 @@ struct result {
     double result;
 };
 
-struct result /*double*/ fixme_function(void *env, uint32_t narg, const double *stack) {
-    printf("fixme function!!!\n");
-    printf("\tenv = %p\n", env);
-    printf("\tnarg = %d\n", narg);    
-    printf("\tstack = %p\n", stack);
-    for (int i = 0; i < narg; ++i) {
-        printf("stack[%d] = %f\n", i, stack[i]);
-    }
+struct result fixme_function(void *env, uint32_t nargs, const double *stack) {
     struct result rval = { .retcode=0, .result=stack[0] + stack[1] };
     return rval;
 }
 
-jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict program, size_t progsz, void *env) {
+struct result second_function(void *env, uint32_t nargs, const double *stack) {
+    uint32_t retcode;
+    double result;
+    if (nargs < 3) {
+        retcode = 1;
+        result = 0.0;
+    } else {
+        retcode = 0;
+        result = stack[0] != 0.0 ? stack[1] : stack[2];
+    }
+    struct result rval = { .retcode=retcode, .result=result };
+    return rval;
+}
+
+typedef struct result (*callback_t)(void *, uint32_t, const double*);
+typedef callback_t (*translator_t)(uint32_t);
+
+callback_t dummy_translator(uint32_t fidx) {
+    switch (fidx) {
+    case 1:
+        return fixme_function;
+    case 2:
+        return second_function;
+    default:
+        return 0;
+    }
+    /* if (fidx == 1) { */
+    /*     return fixme_function; */
+    /* } else { */
+    /*     return 0; */
+    /* } */
+}
+
+double exit_function() {
+    return -1;
+}
+
+jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict program, size_t progsz, void *env, translator_t trans) {
     const struct instruction *ip;    
     size_t pc = 0;
     int sp;
     int fp;
     jit_node_t *fn;
     jit_node_t *ref;
+    callback_t cb;
 
     fn = jit_note(NULL, 0);
     jit_prolog();
     fp = sp = jit_allocai(6 * sizeof(double));
+
+    ret = exit_function();
     
     while (pc < progsz) {
         ip = &program[pc];
@@ -129,9 +162,15 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
             _JIT_stack_push(_jit, JIT_F0, &sp); // move top of stack to C stack
             jit_addi(JIT_R0, JIT_FP, sp - (ip->callop.narg * sizeof(double))); // 3rd argument is stack pointer
             jit_pushargr(JIT_R0);
-            
+
+            cb = trans(ip->callop.fidx);
+            if (!cb) {
+                printf("Failed to map function index: %d\n", ip->callop.fidx);
+                abort();
+            }
+            jit_finishi((jit_pointer_t)cb);
             //jit_finishi((jit_pointer_t)ENV_translate_idx(ip->callop.fidx));
-            jit_finishi((jit_pointer_t)fixme_function);
+            //jit_finishi((jit_pointer_t)fixme_function);
             
             sp -= sizeof(double) * ip->callop.narg; // consume arguments on stack
             
@@ -167,14 +206,14 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
 int main(int argc, char **argv) {
     struct instruction program[] = {
         { .op=OP_PUSH, .dval=234235. },
-        { .op=OP_PUSH, .dval=666666. },
-        /* { .op=OP_PUSH, .dval=2. }, */
-        /* { .op=OP_ADD            }, */
-        { .op=OP_CALL, .callop={ .fidx=1, .narg=2 } },
+        //{ .op=OP_PUSH, .dval=666666. },
+        //{ .op=OP_CALL, .callop={ .fidx=1, .narg=2 } },
         { .op=OP_PUSH, .dval=5. },
-        { .op=OP_MUL            },
-        { .op=OP_PUSH, .dval=2. },
-        { .op=OP_DIV            },
+        { .op=OP_PUSH, .dval=77. },
+        { .op=OP_CALL, .callop={ .fidx=2, .narg=3 } },
+        /* { .op=OP_MUL            }, */
+        /* { .op=OP_PUSH, .dval=2. }, */
+        /* { .op=OP_DIV            }, */
     };
     jit_state_t *_jit;
     jit_node_t *fn;
@@ -188,7 +227,7 @@ int main(int argc, char **argv) {
     env = malloc(sizeof(int));
     printf("address of env: %p\n", env);
     
-    fn = JIT_translate(_jit, &program[0], ARRSIZE(program), env);
+    fn = JIT_translate(_jit, &program[0], ARRSIZE(program), env, dummy_translator);
     (void)jit_emit();
 
     my_func = (func)jit_address(fn);
