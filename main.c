@@ -79,11 +79,7 @@ struct result /*double*/ fixme_function(void *env, uint32_t narg, const double *
     for (int i = 0; i < narg; ++i) {
         printf("stack[%d] = %f\n", i, stack[i]);
     }
-    //return 1.0;
-
-    
-    //return stack[0] + stack[1];
-    struct result rval = { .retcode=1, .result=stack[0] + stack[1] };
+    struct result rval = { .retcode=0, .result=stack[0] + stack[1] };
     return rval;
 }
 
@@ -138,6 +134,7 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
             jit_finishi((jit_pointer_t)fixme_function);
             
             sp -= sizeof(double) * ip->callop.narg; // consume arguments on stack
+            
             jit_retval_d(JIT_F0);
             jit_retval(JIT_R0);
 
@@ -174,10 +171,10 @@ int main(int argc, char **argv) {
         /* { .op=OP_PUSH, .dval=2. }, */
         /* { .op=OP_ADD            }, */
         { .op=OP_CALL, .callop={ .fidx=1, .narg=2 } },
-        /* { .op=OP_PUSH, .dval=5. }, */
-        /* { .op=OP_MUL            }, */
-        /* { .op=OP_PUSH, .dval=2. }, */
-        /* { .op=OP_DIV            }, */
+        { .op=OP_PUSH, .dval=5. },
+        { .op=OP_MUL            },
+        { .op=OP_PUSH, .dval=2. },
+        { .op=OP_DIV            },
     };
     jit_state_t *_jit;
     jit_node_t *fn;
