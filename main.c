@@ -66,7 +66,12 @@ void _JIT_stack_pop(jit_state_t *_jit, int reg, int *sp) {
     jit_ldxi_d(reg, JIT_FP, *sp);
 }
 
-double fixme_function(void *env, uint32_t narg, const double *stack) {
+struct result {
+    int retcode;
+    double result;
+};
+
+struct result /*double*/ fixme_function(void *env, uint32_t narg, const double *stack) {
     printf("fixme function!!!\n");
     printf("\tenv = %p\n", env);
     printf("\tnarg = %d\n", narg);    
@@ -74,7 +79,12 @@ double fixme_function(void *env, uint32_t narg, const double *stack) {
     for (int i = 0; i < narg; ++i) {
         printf("stack[%d] = %f\n", i, stack[i]);
     }
-    return 1.0;
+    //return 1.0;
+
+    
+    //return stack[0] + stack[1];
+    struct result rval = { .retcode=1, .result=stack[0] + stack[1] };
+    return rval;
 }
 
 jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict program, size_t progsz, void *env) {
@@ -83,6 +93,7 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
     int sp;
     int fp;
     jit_node_t *fn;
+    jit_node_t *ref;
 
     fn = jit_note(NULL, 0);
     jit_prolog();
@@ -128,6 +139,10 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
             
             sp -= sizeof(double) * ip->callop.narg; // consume arguments on stack
             jit_retval_d(JIT_F0);
+            jit_retval(JIT_R0);
+
+            ref = jit_bnei(JIT_R0, 0);
+            
             break;
         }
 
@@ -140,7 +155,13 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
     printf("sp = %d\n", sp);
 
     jit_retr_d(JIT_F0);
+
+    jit_patch(ref);
+    jit_movi_d(JIT_F0, -1.0);
+    jit_retr_d(JIT_F0);
+    
     jit_epilog();
+
     return fn;
 }
 
@@ -183,6 +204,6 @@ int main(int argc, char **argv) {
     finish_jit();
 
     free(env);
-    
+
     return 0;
 }
