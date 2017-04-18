@@ -102,29 +102,22 @@ callback_t dummy_translator(uint32_t fidx) {
     default:
         return 0;
     }
-    /* if (fidx == 1) { */
-    /*     return fixme_function; */
-    /* } else { */
-    /*     return 0; */
-    /* } */
 }
 
 jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict program, size_t progsz, void *env, translator_t trans) {
     const struct instruction *ip;    
     size_t pc = 0;
     int sp;
-    int fp;
     jit_node_t *fn;
     jit_node_t *ref;
     callback_t cb;
 
     fn = jit_note(NULL, 0);
     jit_prolog();
-    fp = sp = jit_allocai(6 * sizeof(double));
+    sp = jit_allocai(6 * sizeof(double));
 
     while (pc < progsz) {
         ip = &program[pc];
-        printf("BEFORE %s: fp: %d, sp: %d\n", trans_opcode(ip->op), fp, sp);
         switch (ip->op) {
         case OP_NOP:
             break;
@@ -163,7 +156,6 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
                 abort();
             }
             jit_finishi((jit_pointer_t)cb);
-            //jit_finishi((jit_pointer_t)fixme_function);
             
             sp -= sizeof(double) * ip->callop.narg; // consume arguments on stack
             
@@ -180,13 +172,8 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
             break;
         }
 
-        printf("AFTER %s: fp: %d, sp: %d\n", trans_opcode(ip->op), fp, sp);
         ++pc;
     }
-
-    printf("\n------- end of jitting ------ \n");
-    printf("fp = %d\n", fp);
-    printf("sp = %d\n", sp);
 
     jit_retr_d(JIT_F0);
     jit_epilog();
@@ -203,7 +190,7 @@ int main(int argc, char **argv) {
         { .op=OP_CALL, .callop={ .fidx=1, .narg=2 } },
         { .op=OP_PUSH, .dval=5. },
         { .op=OP_PUSH, .dval=77. },
-        { .op=OP_CALL, .callop={ .fidx=2, .narg=3 } },
+        { .op=OP_CALL, .callop={ .fidx=2, .narg=2 } },
         { .op=OP_PUSH, .dval=5. },
         { .op=OP_MUL            },
         { .op=OP_PUSH, .dval=2. },
