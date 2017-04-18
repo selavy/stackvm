@@ -66,11 +66,14 @@ void _JIT_stack_pop(jit_state_t *_jit, int reg, int *sp) {
     jit_ldxi_d(reg, JIT_FP, *sp);
 }
 
-double fixme_function(void *env, uint32_t narg/*, uint64_t stackp*/) {
-    //printf("fixme function!!!! stackp = %p\n", (void*)stackp);
+double fixme_function(void *env, uint32_t narg, const double *stack) {
     printf("fixme function!!!\n");
-    printf("\tnarg = %d\n", narg);
     printf("\tenv = %p\n", env);
+    printf("\tnarg = %d\n", narg);    
+    printf("\tstack = %p\n", stack);
+    for (int i = 0; i < narg; ++i) {
+        printf("stack[%d] = %f\n", i, stack[i]);
+    }
     return 1.0;
 }
 
@@ -83,7 +86,7 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
 
     fn = jit_note(NULL, 0);
     jit_prolog();
-    fp = sp = jit_allocai(32 * sizeof(double));
+    fp = sp = jit_allocai(6 * sizeof(double));
     
     while (pc < progsz) {
         ip = &program[pc];
@@ -113,19 +116,17 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
             break;
         case OP_CALL:
             jit_prepare();
-            jit_pushargi((jit_word_t)env);
-            jit_pushargi(ip->callop.narg);
+            jit_pushargi((jit_word_t)env); // 1st argument is env pointer
+            jit_pushargi(ip->callop.narg); // 2nd argument is number of arguments
 
-            _JIT_stack_push(_jit, JIT_F0, &sp); // head of stack is stored in a register
-            
-            /* jit_addr(JIT_R0, JIT_FP, sp*sizeof(double)); */
-            /* jit_pushargr(JIT_R0); */
+            _JIT_stack_push(_jit, JIT_F0, &sp); // move top of stack to C stack
+            jit_addi(JIT_R0, JIT_FP, sp - (ip->callop.narg * sizeof(double))); // 3rd argument is stack pointer
+            jit_pushargr(JIT_R0);
             
             //jit_finishi((jit_pointer_t)ENV_translate_idx(ip->callop.fidx));
             jit_finishi((jit_pointer_t)fixme_function);
-
-            sp -= sizeof(double) * ip->callop.narg;
-
+            
+            sp -= sizeof(double) * ip->callop.narg; // consume arguments on stack
             jit_retval_d(JIT_F0);
             break;
         }
@@ -147,10 +148,11 @@ jit_node_t *JIT_translate(jit_state_t *_jit, const struct instruction *restrict 
   
 int main(int argc, char **argv) {
     struct instruction program[] = {
-        { .op=OP_PUSH, .dval=1. },
-        { .op=OP_PUSH, .dval=2. },
-        { .op=OP_ADD            },
-        { .op=OP_CALL, .callop={ .fidx=1, .narg=1 } },
+        { .op=OP_PUSH, .dval=234235. },
+        { .op=OP_PUSH, .dval=666666. },
+        /* { .op=OP_PUSH, .dval=2. }, */
+        /* { .op=OP_ADD            }, */
+        { .op=OP_CALL, .callop={ .fidx=1, .narg=2 } },
         /* { .op=OP_PUSH, .dval=5. }, */
         /* { .op=OP_MUL            }, */
         /* { .op=OP_PUSH, .dval=2. }, */
