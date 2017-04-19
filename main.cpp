@@ -46,7 +46,7 @@ struct Instruction {
         double dval;
         struct {
             uint32_t fidx;
-            uint32_t narg;
+            uint32_t nargs;
         } callop;
     };
 
@@ -54,7 +54,7 @@ struct Instruction {
     Instruction(Opcode op, int ival) : op(op), ival(ival) {}
     Instruction(Opcode op, double dval) : op(op), dval(dval) {}
     Instruction(Opcode op, uint32_t function_idx, uint32_t nargs)
-        : op(op) { callop.fidx = function_idx; callop.narg = nargs; }
+        : op(op) { callop.fidx = function_idx; callop.nargs = nargs; }
 };
 
 void _JIT_stack_push(jit_state_t *_jit, int reg, int *sp) {
@@ -165,6 +165,20 @@ public:
             }
                 break;
             case OP_CALL: {
+                stackPush(JIT_F0);
+                const int sp = stack_top_idx - (instr.callop.nargs);
+                jit_addi(JIT_R0, JIT_FP, stack_base_offset + sp * sizeof(double));
+                
+                jit_prepare();
+                jit_pushargi((jit_word_t)userdata); // 1st arg: userdata
+                jit_pushargi(instr.callop.nargs);   // 2nd arg: # of arguments
+                jit_pushargr(JIT_R0);               // 3rd arg: pointer to args on stack
+
+                auto &&cb = trans.lookup(instr.callop.fidx);
+                jit_finishi(reinterpret_cast<jit_pointer_t>(cb));
+
+                stack_top_idx -= instr.callop.nargs; // consume arguments on stack
+                jit_retval_d(JIT_F0);
             }
                 break;
             }
@@ -291,7 +305,8 @@ int main(int argc, char **argv) {
     Program program = {
         { OP_PUSH, 1234. },
         { OP_PUSH, 6666. },
-        { OP_ADD         },
+        //{ OP_ADD         },
+        { OP_CALL, 1, 2  }, // fixme_function
         { OP_PUSH, 4444. },
         { OP_SUB         },
         { OP_PUSH, 5555. },
