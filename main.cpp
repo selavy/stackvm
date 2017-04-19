@@ -69,6 +69,18 @@ void _JIT_stack_pop(jit_state_t *_jit, int reg, int *sp) {
 
 typedef std::pair<int, double> Result;
 
+template<typename T, typename R>
+void* evil_cast(R(T::*f)(uint32_t, const double*))
+{
+    union
+    {
+        R(T::*pf)(uint32_t, const double*);
+        void* p;
+    };
+    pf = f;
+    return p;
+}
+
 // TODO: implement
 struct MyEnv {
     // static Result myFunc(void *self, uint32_t nargs, const double *stack) {
@@ -112,17 +124,21 @@ struct Translator {
 };
 
 struct DummyTranslator : public Translator {
+    
     virtual ~DummyTranslator() {}
     Callback lookup(uint32_t function_idx) override {
+        //#pragma GCC diagnostic ignored "-Wpmf-conversions"        
         switch (function_idx) {
         case 1:
             //return (void*)fixme_function;
-            return (void*)&MyEnv::myFunc;
+            //return (void*)&MyEnv::myFunc;
+            return evil_cast(&MyEnv::myFunc);
         case 2:
             return (void*)second_function;
         default:
             throw std::runtime_error("Unknown function index!");
         }
+        //#pragma GCC diagnostic pop
     }
 };
 
