@@ -71,14 +71,19 @@ typedef std::pair<int, double> Result;
 
 // TODO: implement
 struct MyEnv {
-    static Result myFunc(void *self, uint32_t nargs, const double *stack) {
-        return static_cast<MyEnv*>(self)->myFuncImpl(nargs, stack);
-    }
+    // static Result myFunc(void *self, uint32_t nargs, const double *stack) {
+    //     return static_cast<MyEnv*>(self)->myFuncImpl(nargs, stack);
+    // }
 
-private:
-    Result myFuncImpl(uint32_t nargs, const double *stack) {
+    Result myFunc(/*void *self,*/ uint32_t nargs, const double *stack) {
+        printf("inside MyEnv::myFunc: %p\n", this);
         return std::make_pair(0, stack[0] + stack[1]);
     }
+
+// private:
+    // Result myFuncImpl(uint32_t nargs, const double *stack) {
+    //     return std::make_pair(0, stack[0] + stack[1]);
+    // }
 };
 
 Result fixme_function(void*, uint32_t nargs, const double *stack) {
@@ -105,13 +110,14 @@ struct Translator {
     virtual ~Translator() {}
     virtual Callback lookup(uint32_t function_idx)=0;
 };
+
 struct DummyTranslator : public Translator {
     virtual ~DummyTranslator() {}
     Callback lookup(uint32_t function_idx) override {
         switch (function_idx) {
         case 1:
             //return (void*)fixme_function;
-            return (void*)MyEnv::myFunc;
+            return (void*)&MyEnv::myFunc;
         case 2:
             return (void*)second_function;
         default:
@@ -250,7 +256,7 @@ int main(int argc, char **argv) {
     init_jit(argv[0]); // TODO: move to static function
     JIT jit;
     DummyTranslator trans;
-    MyEnv env;
+    MyEnv env, env2, env3;
 
     if (!jit.compile(program, trans, &env)) {
         std::cerr << "Failed to compile program!" << std::endl;
@@ -268,7 +274,16 @@ int main(int argc, char **argv) {
     std::cout << "Result: " << jit.result() << std::endl;
     std::cout << "Expected: " << (((1234. + 6666.) - 4444.) * 5555.) << std::endl;
 
+    for (int i = 0; i < 10; ++i) {
+        std::cout << jit.result() << std::endl;
+    }
+
     finish_jit();
+
+    double stk[] = { 1., 2. };
+    auto v1 = env2.myFunc(2, &stk[0]);
+    auto v2 = env3.myFunc(2, &stk[0]);
+    std::cout << (v1.second + v2.second) << std::endl;
 
     
     return 0;
