@@ -69,11 +69,23 @@ void _JIT_stack_pop(jit_state_t *_jit, int reg, int *sp) {
 
 typedef std::pair<int, double> Result;
 
-Result fixme_function(void *env, uint32_t nargs, const double *stack) {
+// TODO: implement
+struct MyEnv {
+    static Result myFunc(void *self, uint32_t nargs, const double *stack) {
+        return static_cast<MyEnv*>(self)->myFuncImpl(nargs, stack);
+    }
+
+private:
+    Result myFuncImpl(uint32_t nargs, const double *stack) {
+        return std::make_pair(0, stack[0] + stack[1]);
+    }
+};
+
+Result fixme_function(void*, uint32_t nargs, const double *stack) {
     return std::make_pair(0, stack[0] + stack[1]);
 }
 
-Result second_function(void *env, uint32_t nargs, const double *stack) {
+Result second_function(void*, uint32_t nargs, const double *stack) {
     int retcode;
     double result;
     if (nargs < 3) {
@@ -86,7 +98,8 @@ Result second_function(void *env, uint32_t nargs, const double *stack) {
     return std::make_pair(retcode, result);
 }
 
-typedef Result (*Callback)(void *, uint32_t, const double*);
+//typedef Result (*Callback)(void *, uint32_t, const double*);
+typedef void* Callback;
 
 struct Translator {
     virtual ~Translator() {}
@@ -97,9 +110,10 @@ struct DummyTranslator : public Translator {
     Callback lookup(uint32_t function_idx) override {
         switch (function_idx) {
         case 1:
-            return fixme_function;
+            //return (void*)fixme_function;
+            return (void*)MyEnv::myFunc;
         case 2:
-            return second_function;
+            return (void*)second_function;
         default:
             throw std::runtime_error("Unknown function index!");
         }
@@ -220,8 +234,6 @@ private:
     double result_;
 };
 
-// TODO: implement
-struct MyEnv {};
   
 int main(int argc, char **argv) {
     Program program = {
