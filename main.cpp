@@ -83,12 +83,10 @@ void* evil_cast(R(T::*f)(uint32_t, const double*, const char *&error))
 
 // TODO: implement
 struct MyEnv {
-    MyEnv() : error_(nullptr) {}
     Result myFunc(/*void *self,*/ uint32_t nargs, const double *stack, const char *&error) {
         error = "this is a really bad error!";
         return std::make_pair(0, stack[0] + stack[1]);
     }
-    const char *error_;
 };
 
 typedef void* Callback;
@@ -116,6 +114,7 @@ struct DummyTranslator : public Translator {
 typedef std::vector<Instruction> Program;
 
 class JIT {
+    const char *error_;
 public:
     JIT() : _jit(jit_new_state()), func_(nullptr) {}
     
@@ -178,10 +177,10 @@ public:
                 jit_addi(JIT_R0, JIT_FP, stack_base_offset + sp * sizeof(double));
                 
                 jit_prepare();
-                jit_pushargi((jit_word_t)&env);       // 1st arg: userdata
-                jit_pushargi(instr.callop.nargs);     // 2nd arg: # of arguments
-                jit_pushargr(JIT_R0);                 // 3rd arg: pointer to args on stack
-                jit_pushargi((jit_word_t)&env.error_); // 4th arg: pointer to error message
+                jit_pushargi((jit_word_t)&env);    // 1st arg: userdata
+                jit_pushargi(instr.callop.nargs);  // 2nd arg: # of arguments
+                jit_pushargr(JIT_R0);              // 3rd arg: pointer to args on stack
+                jit_pushargi((jit_word_t)&error_); // 4th arg: pointer to error message
 
                 auto &&cb = trans.lookup(instr.callop.fidx);
                 jit_finishi(reinterpret_cast<jit_pointer_t>(cb));
@@ -217,8 +216,8 @@ public:
         jit_disassemble();
     }
 
-    const char *error() const {
-        return "TODO: implement";
+    const char *error() const noexcept {
+        return error_;
     }
     
 private:
@@ -262,8 +261,8 @@ int main(int argc, char **argv) {
     std::cout << "Result: " << jit.result() << std::endl;
     std::cout << "Expected: " << (((1234. + 6666.) - 4444.) * 5555.) << std::endl;
 
-    if (env.error_ != nullptr) {
-        fprintf(stderr, "Error: %s\n", env.error_);
+    if (jit.error() != nullptr) {
+        fprintf(stderr, "Error: %s\n", jit.error());
     }
 
     finish_jit();
