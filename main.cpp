@@ -81,11 +81,14 @@ void* evil_cast(R(T::*f)(uint32_t, const double*, const char *&error))
     return p;
 }
 
-// TODO: implement
 struct MyEnv {
     Result myFunc(/*void *self,*/ uint32_t nargs, const double *stack, const char *&error) {
+#if 1
+        return std::make_pair(true, stack[0] + stack[1]);
+#else
         error = "this is a really bad error!";
         return std::make_pair(false, stack[0] + stack[1]);
+#endif
     }
 };
 
@@ -192,7 +195,7 @@ public:
                 jit_retval_d(JIT_F0);
                 jit_retval(JIT_R0);
 
-                ref = jit_blti(JIT_R0, 0);
+                ref = jit_bnei(JIT_R0, 0);
                 jit_reti_d(*reinterpret_cast<const double*>(&JIT_ERROR));
                 jit_patch(ref);
             }
