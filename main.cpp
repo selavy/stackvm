@@ -85,7 +85,7 @@ void* evil_cast(R(T::*f)(uint32_t, const double*, const char *&error))
 struct MyEnv {
     Result myFunc(/*void *self,*/ uint32_t nargs, const double *stack, const char *&error) {
         error = "this is a really bad error!";
-        return std::make_pair(0, stack[0] + stack[1]);
+        return std::make_pair(false, stack[0] + stack[1]);
     }
 };
 
@@ -115,8 +115,10 @@ typedef std::vector<Instruction> Program;
 
 class JIT {
     const char *error_;
+    const uint64_t JIT_ERROR;
+    
 public:
-    JIT() : _jit(jit_new_state()), func_(nullptr) {}
+    JIT() : _jit(jit_new_state()), func_(nullptr), JIT_ERROR(78787878ull) {}
     
     ~JIT() {
         jit_destroy_state();
@@ -124,6 +126,7 @@ public:
 
     template <class Environment>
     bool compile(const Program &program, Translator &trans, Environment &env) {
+        jit_node_t *ref;        
         jit_node_t *fn = jit_note(NULL, 0);
         jit_prolog();
         const int stack_base_offset = jit_allocai(32 * sizeof(double));
@@ -187,6 +190,11 @@ public:
 
                 stack_top_idx -= instr.callop.nargs; // consume arguments on stack
                 jit_retval_d(JIT_F0);
+                jit_retval(JIT_R0);
+
+                ref = jit_blti(JIT_R0, 0);
+                jit_reti_d(*reinterpret_cast<const double*>(&JIT_ERROR));
+                jit_patch(ref);
             }
                 break;
             }
@@ -205,7 +213,8 @@ public:
 
     bool run() {
         result_ = func_();
-        return true;
+        //return true;
+        return *reinterpret_cast<uint64_t*>(&result_) != JIT_ERROR;
     }
 
     double result() const noexcept {
@@ -260,10 +269,6 @@ int main(int argc, char **argv) {
 
     std::cout << "Result: " << jit.result() << std::endl;
     std::cout << "Expected: " << (((1234. + 6666.) - 4444.) * 5555.) << std::endl;
-
-    if (jit.error() != nullptr) {
-        fprintf(stderr, "Error: %s\n", jit.error());
-    }
 
     finish_jit();
     
