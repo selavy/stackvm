@@ -83,37 +83,11 @@ void* evil_cast(R(T::*f)(uint32_t, const double*))
 
 // TODO: implement
 struct MyEnv {
-    // static Result myFunc(void *self, uint32_t nargs, const double *stack) {
-    //     return static_cast<MyEnv*>(self)->myFuncImpl(nargs, stack);
-    // }
-
     Result myFunc(/*void *self,*/ uint32_t nargs, const double *stack) {
         printf("inside MyEnv::myFunc: %p\n", this);
         return std::make_pair(0, stack[0] + stack[1]);
     }
-
-// private:
-    // Result myFuncImpl(uint32_t nargs, const double *stack) {
-    //     return std::make_pair(0, stack[0] + stack[1]);
-    // }
 };
-
-Result fixme_function(void*, uint32_t nargs, const double *stack) {
-    return std::make_pair(0, stack[0] + stack[1]);
-}
-
-Result second_function(void*, uint32_t nargs, const double *stack) {
-    int retcode;
-    double result;
-    if (nargs < 3) {
-        retcode = 1;
-        result = 0.0;
-    } else {
-        retcode = 0;
-        result = stack[0] != 0.0 ? stack[1] : stack[2];
-    }
-    return std::make_pair(retcode, result);
-}
 
 //typedef Result (*Callback)(void *, uint32_t, const double*);
 typedef void* Callback;
@@ -130,11 +104,7 @@ struct DummyTranslator : public Translator {
         //#pragma GCC diagnostic ignored "-Wpmf-conversions"        
         switch (function_idx) {
         case 1:
-            //return (void*)fixme_function;
-            //return (void*)&MyEnv::myFunc;
             return evil_cast(&MyEnv::myFunc);
-        case 2:
-            return (void*)second_function;
         default:
             throw std::runtime_error("Unknown function index!");
         }
@@ -261,8 +231,7 @@ int main(int argc, char **argv) {
     Program program = {
         { OP_PUSH, 1234. },
         { OP_PUSH, 6666. },
-        //{ OP_ADD         },
-        { OP_CALL, 1, 2  }, // fixme_function
+        { OP_CALL, 1, 2  },
         { OP_PUSH, 4444. },
         { OP_SUB         },
         { OP_PUSH, 5555. },
@@ -290,17 +259,7 @@ int main(int argc, char **argv) {
     std::cout << "Result: " << jit.result() << std::endl;
     std::cout << "Expected: " << (((1234. + 6666.) - 4444.) * 5555.) << std::endl;
 
-    for (int i = 0; i < 10; ++i) {
-        std::cout << jit.result() << std::endl;
-    }
-
     finish_jit();
-
-    double stk[] = { 1., 2. };
-    auto v1 = env2.myFunc(2, &stk[0]);
-    auto v2 = env3.myFunc(2, &stk[0]);
-    std::cout << (v1.second + v2.second) << std::endl;
-
     
     return 0;
 }
