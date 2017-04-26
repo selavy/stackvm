@@ -70,11 +70,11 @@ void _JIT_stack_pop(jit_state_t *_jit, int reg, int *sp) {
 typedef std::pair<int, double> Result;
 
 template<typename T, typename R>
-void* evil_cast(R(T::*f)(uint32_t, const double*, const char **error))
+void* evil_cast(R(T::*f)(uint32_t, const double*, const char *&error))
 {
     union
     {
-        R(T::*pf)(uint32_t, const double*, const char **error);
+        R(T::*pf)(uint32_t, const double*, const char *&error);
         void* p;
     };
     pf = f;
@@ -84,8 +84,8 @@ void* evil_cast(R(T::*f)(uint32_t, const double*, const char **error))
 // TODO: implement
 struct MyEnv {
     MyEnv() : error_(nullptr) {}
-    Result myFunc(/*void *self,*/ uint32_t nargs, const double *stack, const char **error) {
-        *error = "this is a really bad error!";
+    Result myFunc(/*void *self,*/ uint32_t nargs, const double *stack, const char *&error) {
+        error = "this is a really bad error!";
         return std::make_pair(0, stack[0] + stack[1]);
     }
     const char *error_;
