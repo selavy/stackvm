@@ -70,11 +70,11 @@ void _JIT_stack_pop(jit_state_t *_jit, int reg, int *sp) {
 typedef std::pair<int, double> Result;
 
 template<typename T, typename R>
-void* evil_cast(R(T::*f)(uint32_t, const double*))
+void* evil_cast(R(T::*f)(uint32_t, const double*, const char **error))
 {
     union
     {
-        R(T::*pf)(uint32_t, const double*);
+        R(T::*pf)(uint32_t, const double*, const char **error);
         void* p;
     };
     pf = f;
@@ -83,13 +83,14 @@ void* evil_cast(R(T::*f)(uint32_t, const double*))
 
 // TODO: implement
 struct MyEnv {
-    Result myFunc(/*void *self,*/ uint32_t nargs, const double *stack) {
-        printf("inside MyEnv::myFunc: %p\n", this);
+    MyEnv() : error_(nullptr) {}
+    Result myFunc(/*void *self,*/ uint32_t nargs, const double *stack, const char **error) {
+        *error = "this is a really bad error!";
         return std::make_pair(0, stack[0] + stack[1]);
     }
+    const char *error_;
 };
 
-//typedef Result (*Callback)(void *, uint32_t, const double*);
 typedef void* Callback;
 
 struct Translator {
@@ -122,7 +123,8 @@ public:
         jit_destroy_state();
     }
 
-    bool compile(const Program &program, Translator &trans, void *userdata) {
+    template <class Environment>
+    bool compile(const Program &program, Translator &trans, Environment &env) {
         jit_node_t *fn = jit_note(NULL, 0);
         jit_prolog();
         const int stack_base_offset = jit_allocai(32 * sizeof(double));
@@ -176,9 +178,10 @@ public:
                 jit_addi(JIT_R0, JIT_FP, stack_base_offset + sp * sizeof(double));
                 
                 jit_prepare();
-                jit_pushargi((jit_word_t)userdata); // 1st arg: userdata
-                jit_pushargi(instr.callop.nargs);   // 2nd arg: # of arguments
-                jit_pushargr(JIT_R0);               // 3rd arg: pointer to args on stack
+                jit_pushargi((jit_word_t)&env);       // 1st arg: userdata
+                jit_pushargi(instr.callop.nargs);     // 2nd arg: # of arguments
+                jit_pushargr(JIT_R0);                 // 3rd arg: pointer to args on stack
+                jit_pushargi((jit_word_t)&env.error_); // 4th arg: pointer to error message
 
                 auto &&cb = trans.lookup(instr.callop.fidx);
                 jit_finishi(reinterpret_cast<jit_pointer_t>(cb));
@@ -241,9 +244,9 @@ int main(int argc, char **argv) {
     init_jit(argv[0]); // TODO: move to static function
     JIT jit;
     DummyTranslator trans;
-    MyEnv env, env2, env3;
+    MyEnv env;
 
-    if (!jit.compile(program, trans, &env)) {
+    if (!jit.compile(program, trans, env)) {
         std::cerr << "Failed to compile program!" << std::endl;
         return 1;
     }
@@ -258,6 +261,10 @@ int main(int argc, char **argv) {
 
     std::cout << "Result: " << jit.result() << std::endl;
     std::cout << "Expected: " << (((1234. + 6666.) - 4444.) * 5555.) << std::endl;
+
+    if (env.error_ != nullptr) {
+        fprintf(stderr, "Error: %s\n", env.error_);
+    }
 
     finish_jit();
     
