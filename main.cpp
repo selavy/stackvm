@@ -81,17 +81,6 @@ void* evil_cast(R(T::*f)(uint32_t, const double*, const char *&error))
     return p;
 }
 
-struct MyEnv {
-    Result myFunc(/*void *self,*/ uint32_t nargs, const double *stack, const char *&error) {
-#if 1
-        return std::make_pair(true, stack[0] + stack[1]);
-#else
-        error = "this is a really bad error!";
-        return std::make_pair(false, stack[0] + stack[1]);
-#endif
-    }
-};
-
 typedef void* Callback;
 
 struct Translator {
@@ -99,18 +88,74 @@ struct Translator {
     virtual Callback lookup(uint32_t function_idx)=0;
 };
 
-struct DummyTranslator : public Translator {
+struct IF {
+    Result handleIf(uint32_t nargs, const double *stack, const char *&err) {
+        if (nargs < 3) {
+            err = "IF: not enough arguments";
+            return std::make_pair(false, 0.);
+        }
+        printf("\thandleIf(%p)\n", this);        
+        return std::make_pair(true, stack[0] != 0. ? stack[1] : stack[2]);
+    }
+};
     
-    virtual ~DummyTranslator() {}
+struct MIN {
+    Result handleMin(uint32_t nargs, const double *stack, const char *&err) {
+        if (nargs < 1) {
+            err = "MIN: not enough arguments";
+            return std::make_pair(false, 0.);
+        }
+        printf("\thandleMin(%p)\n", this);        
+        double result = stack[0];
+        for (int i = 1; i < nargs; ++i) {
+            result = std::min(result, stack[i]);
+        }
+        return std::make_pair(true, result);
+    }
+};
+
+struct BotSvc {
+    BotSvc() : vals(new int[5]) {
+        for (int i = 0; i < 5; ++i) {
+            vals[i] = i;
+        }
+    }
+    ~BotSvc() {
+        delete[] vals;
+    }
+    Result handleQuote(uint32_t nargs, const double *stack, const char *&err) {
+        if (nargs < 1) {
+            err = "QUOTE: too few arguments";
+            return std::make_pair(false, 0.);
+        }
+        printf("\thandleQuote(%p)\n", this);
+        const double result = stack[0] > 0. ? vals[0] : vals[1];
+        return std::make_pair(true, result);
+    }
+
+    int *vals;
+};
+
+enum {
+    eIf = 1,
+    eMin = 2,
+    eQuote = 3,
+};
+
+template <class Impl>
+struct Env : IF, MIN, public Impl, public Translator {
+    virtual ~Env() {}
     Callback lookup(uint32_t function_idx) override {
-        //#pragma GCC diagnostic ignored "-Wpmf-conversions"        
         switch (function_idx) {
-        case 1:
-            return evil_cast(&MyEnv::myFunc);
+        case eIf:
+            return evil_cast(&IF::handleIf);
+        case eMin:
+            return evil_cast(&MIN::handleMin);
+        case eQuote:
+            return evil_cast(&Impl::handleQuote);
         default:
             throw std::runtime_error("Unknown function index!");
         }
-        //#pragma GCC diagnostic pop
     }
 };
 
@@ -243,21 +288,20 @@ private:
   
 int main(int argc, char **argv) {
     Program program = {
-        { OP_PUSH, 1234. },
-        { OP_PUSH, 6666. },
-        { OP_CALL, 1, 2  },
-        { OP_PUSH, 4444. },
-        { OP_SUB         },
-        { OP_PUSH, 5555. },
-        { OP_MUL         },
+        { OP_PUSH, 1. },
+        { OP_PUSH, 2. },
+        { OP_PUSH, 3. },
+        { OP_CALL, eIf, 3  },
+        { OP_CALL, eQuote, 1 },
     };
 
     init_jit(argv[0]); // TODO: move to static function
     JIT jit;
-    DummyTranslator trans;
-    MyEnv env;
+    Env<BotSvc> env;
 
-    if (!jit.compile(program, trans, env)) {
+    printf("\nenv = %p\n", &env);
+
+    if (!jit.compile(program, env, env)) {
         std::cerr << "Failed to compile program!" << std::endl;
         return 1;
     }
@@ -267,8 +311,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    std::cout << "\n\nProgram: \n";
-    jit.disassemble();
+    //std::cout << "\n\nProgram: \n";
+    //jit.disassemble();
 
     std::cout << "Result: " << jit.result() << std::endl;
     std::cout << "Expected: " << (((1234. + 6666.) - 4444.) * 5555.) << std::endl;
